@@ -1,0 +1,5 @@
+image:
+  tag: "11.0.0-preview"
+
+ingress:
+  enabled: false

@@ -1,0 +1,99 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: task1-multitool-config
+  namespace: lesson8
+data:
+  multitool_http_port: "8080"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: task1-nginx-html
+  namespace: lesson8
+data:
+  index.html: |
+    Simplest html page for Task1 by A.Nedorezov ;)
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task1-deployment
+  namespace: lesson8
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: task1-deployment
+  template:
+    metadata:
+      labels:
+        app: task1-deployment
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.25.4
+          volumeMounts:
+            - name: task1-nginx-html
+              mountPath: /usr/share/nginx/html
+        - name: multitool
+          image: wbitt/network-multitool
+          env:
+            - name: HTTP_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: task1-multitool-config
+                  key: multitool_http_port
+      volumes:
+        - name: task1-nginx-html
+          configMap:
+            name: task1-nginx-html
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: task1-svc
+  namespace: lesson8
+spec:
+  ports:
+  - name: nginx-http
+    protocol: TCP
+    port: 80
+    targetPort: 80
+  - name: multitool-http
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: task1-deployment
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: task1-ingress
+  namespace: lesson8
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: task1-svc
+            port:
+              number: 80
+      - path: /tool
+        pathType: Prefix
+        backend:
+          service:
+            name: task1-svc
+            port:
+              number: 8080

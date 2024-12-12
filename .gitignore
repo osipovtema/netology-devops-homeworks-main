@@ -1,0 +1,7 @@
+*.pkvars.hcl
+*.vagrant
+*.terraform
+*.tfvars
+*.lock.hcl
+*.tfstate*
+/08-kuber/12-install/kubespray/

@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: task2-daemonset
+  namespace: lesson6
+spec:
+  selector:
+    matchLabels:
+      app: task2-daemonset
+  template:
+    metadata:
+      labels:
+        app: task2-daemonset
+    spec:
+      containers:
+      - name: multitool
+        image: wbitt/network-multitool
+        volumeMounts:
+        - name: node-syslog
+          mountPath: /node-syslog
+          readOnly: true
+      volumes:
+      - name: node-syslog
+        hostPath:
+          path: /var/log/syslog

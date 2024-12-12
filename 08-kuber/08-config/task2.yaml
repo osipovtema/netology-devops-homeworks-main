@@ -1,0 +1,86 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: task2-nginx-html
+  namespace: lesson8
+data:
+  index.html: |
+    Simplest html page for Task2 by A.Nedorezov ;)
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task2-deployment
+  namespace: lesson8
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: task2-deployment
+  template:
+    metadata:
+      labels:
+        app: task2-deployment
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.25.4
+          volumeMounts:
+            - name: task2-nginx-html
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: task2-nginx-html
+          configMap:
+            name: task2-nginx-html
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: task2-svc
+  namespace: lesson8
+spec:
+  ports:
+    - name: nginx-http
+      protocol: TCP
+      port: 80
+  selector:
+    app: task2-deployment
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: task2-ingress
+  namespace: lesson8
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - host: microk8s.nedorezov.ru
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: task2-svc
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - microk8s.nedorezov.ru
+      secretName: task2-secret-tls
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: task2-secret-tls
+  namespace: lesson8
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQyVENDQXNHZ0F3SUJBZ0lVSFl6b2dVVEpVSEtPSXJnMDlVMlJZQmpSRkdnd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1ZqRUxNQWtHQTFVRUJoTUNRVlV4RXpBUkJnTlZCQWdNQ2xOdmJXVXRVM1JoZEdVeElUQWZCZ05WQkFvTQpHRWx1ZEdWeWJtVjBJRmRwWkdkcGRITWdVSFI1SUV4MFpERVBNQTBHQTFVRUF3d0djbTl2ZEdOaE1CNFhEVEkwCk1EUXhOREE0TkRjek5Gb1hEVEkxTURReE5EQTRORGN6TkZvd1dERUxNQWtHQTFVRUJoTUNRMEV4RFRBTEJnTlYKQkFnTUJFNXZibVV4Q3pBSkJnTlZCQWNNQWs1Q01RMHdDd1lEVlFRS0RBUk9iMjVsTVI0d0hBWURWUVFEREJWdAphV055YjJzNGN5NXVaV1J2Y21WNmIzWXVjblV3Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUURRMiszSGxZeHEvcDJHNCs4VzRjTmJsUTdoa3NhVWhNcnlBN0JIMlFDdXptK3NYWTY3WDI1UTR2aGQKcUR6Ymp2aHVFQVhXb0JHYTYvTFo2bzNDb3JBWmhVUFU4WFdHbmZWWWN5WXZrdFFadUo2Ym5pWUN6OEUwa3V2WQp3TEsrVVhvUjVJbTBkNFFXQkRnVXJxa2lQNHpVRUR3aVV4L1BYcGtCN0pSakY3VWxlQXNsZndFd3pibUhwQXhtCnloTW5HOGhMdFYxSStDMzFjV25yRHRrZTNFaVNRcm1CaGllNDcxb3d2ZDc2eDVqQUxRNFdua1JCeGtrdndodUwKMW12dXFBVUZQQlRPRHB5NlphZWJkMmhHU2xLUzVkNDdFMStCSGpGVVE4bFZmR1RmZzM3ditaa0RJK2RmdGVORAp2aHdUamZ0VEdzUGIvWE5NdVljTzZhU2FUbktUQWdNQkFBR2pnWnd3Z1prd0h3WURWUjBqQkJnd0ZvQVU4bnZxCnBtalloTmdwYU83ZFFTNEVRMnRNUEdJd0NRWURWUjBUQkFJd0FEQUxCZ05WSFE4RUJBTUNCUEF3UHdZRFZSMFIKQkRnd05vSVZiV2xqY205ck9ITXVibVZrYjNKbGVtOTJMbkoxZ2hjcUxtMXBZM0p2YXpoekxtNWxaRzl5WlhwdgpkaTV5ZFljRVZQeUwvekFkQmdOVkhRNEVGZ1FVVnkxMlk0NkZNczVoZXF3RERhUWVYQXdXSHpNd0RRWUpLb1pJCmh2Y05BUUVMQlFBRGdnRUJBSlFnbFVJUGhkM25JaFNsYm9ITi9vYmhTTEdCSXFia0hHWGxJelovWldjeGNqREsKbnIvRFM0STdqL0t6OVhzUytEZkYyYTRXQi9qRDNrcm1kWEhjYmdkTDkrU2NicGVPNWh6OVNGUFFIejkzR3FadgpvUzBteXpscVJPZzFVV044UWNseitpYit3TjA3QWJXYTh3bWU0NDMzUkpDVGZjOUYwdnY1Q245cmZDdzFPSVQxCkZTTmJDMDNJdUZ2K1NIMHZVMEQ2aHhQRndUb1FYSFBYYkZQajlicTRtWm5lcmo0b0xNZ3NOa2hyclIrcTVUNHIKMi9ma0ZYN1psM1NKcXRKbXpvaFBLcHF1RGVwVWYyVVlWbHI0MWRUVVdIclZaR0JpeHVld0VCZE9kMThhTFJLQwo2RFdHengyMW5QdUxGSko3ZE5ZZ09CRmhVSnVLUlQ2ckNKQXgzL3c9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRRFEyKzNIbFl4cS9wMkcKNCs4VzRjTmJsUTdoa3NhVWhNcnlBN0JIMlFDdXptK3NYWTY3WDI1UTR2aGRxRHpianZodUVBWFdvQkdhNi9MWgo2bzNDb3JBWmhVUFU4WFdHbmZWWWN5WXZrdFFadUo2Ym5pWUN6OEUwa3V2WXdMSytVWG9SNUltMGQ0UVdCRGdVCnJxa2lQNHpVRUR3aVV4L1BYcGtCN0pSakY3VWxlQXNsZndFd3pibUhwQXhteWhNbkc4aEx0VjFJK0MzMWNXbnIKRHRrZTNFaVNRcm1CaGllNDcxb3d2ZDc2eDVqQUxRNFdua1JCeGtrdndodUwxbXZ1cUFVRlBCVE9EcHk2WmFlYgpkMmhHU2xLUzVkNDdFMStCSGpGVVE4bFZmR1RmZzM3ditaa0RJK2RmdGVORHZod1RqZnRUR3NQYi9YTk11WWNPCjZhU2FUbktUQWdNQkFBRUNnZ0VBSExIYW5VMGltYUNacStxczhvdlo5ejhuYUQ1dUlnR01rR3VKVUpXenpsQjIKYjB2N1RDcjBVUkNkNXVBeVhFZnNRZExadW44TGJDbDJtQkh0b0F3Ui9hK2RmaWdlYVh4U05QQzlFbFF0NThyQgpuOGUrbVN4Sjh4c3NZLzgxajRoS0tTTW8rQzVqYTFMeEVZWmRubUwweWozZ3hTWitmRk1XMm5qU2VqckxuSFgrCkhKQWNJU3lvcjE2NlNoYklnK1dHelZHUUlMbFRQcGx5QmRzT01jS1FJRzBicldRNlFBc2xhcE1hZWZhQkxKczMKejViRUFHbHM4cWhvU3dlZXhkcVZWWUN2ditBRS9Gc1oyY1pobFFoMm53L1UvRWJTWm96US84czFDam43SmJaZwpUR3JhcFRLRnlnY3pyclk4b3U2M09NaWVzdGFvL0MvaXNweCtUN0RINFFLQmdRRHdOaUJnOVI2b0J0czNSM01TCm44d2VjRmh3S2cxd3NKeWJGbm9hb3hoMlVBMWJnMFNvNTA4cVluTkNoaUJTZWs4UnB6cjlWWDU5RHFvb3MrTWUKTGtGZmNjWmpnMHloV1lSYWJJOW9PQjVZU00zTHZzZitaUjIxWmJpaU1iSTVDWGlLZzZQU0JyelAxeUNmRFRYcgpvQ1M3TVdDeWxHNG1PamRtOWVIVUdVNGJ6UUtCZ1FEZWxrSVBpUndVZFlyTjBoYXNFUmN0bGZxZjh0ejZyd2hzCklwRTNsR3dWZ0FwOU1uV1h0NmYrRHQrdGZBU09MSDZydVFLQnZrdEl4WjVLVU5oTWtvZkR0aGJPOVhnSTVyd00KeWVqdHBmQ0NGOTdkdG9jOHlwaHZ2dUxRR1FOellSWi9icUk2aUFiTE5QY2pFR0Q0emhIMTRkRU9IRTRHMGxkbApTV001bFNnbjN3S0JnUURJRlgzQTVVd0V6N2szZ1dkRGd5RmwxVlNGRVRJaXhLbWRzUXBDTjhuL2VzeTFobERoCms5Sm9UcHNOTldXazdjWUF3VmdzZmxNZTNlRTBpQ3BORUdCWm5RNlFBMlVJSE9WVzRJaFBXamRFZUZnYk55MmwKSkJxcjV5LzB3Z3BlNGhtcTN0M002dG5KRWJ0VllJNmlWc0ZodjA1NVVaT3llZGwrQko5M3FTQmJuUUtCZ1FDbQpVQTg4SEc1bXV3empqTDUwQXJFVzFxRlZNZG43VlIwdDd3WWlTVHdaTkhxaDRUb01DcVh6SnBucXZtZUk4NllTCkdVTE9QcWx4em5iZmdGaWRuajdpOVFORjBCUElVdDdmajE0RGM2R3BFcnpyWEo3ZnhXRHczZWdMSlNWMjZHd3UKK3pNc0dNYzZ2bkNLT29xNlhQNytnYVA2cnh0OTdWeHZ5YzNpRUpqWWNRS0JnR1NscFhwYk5DSUVBRjFjdi96ZApwZVQ4emluNDk2WWwxa25KcTJqS0wxOFpoQ1k4SEp1WkVDclo4eExISHpVK3lsS29Mci9aWStGejlML2VXLzNwCnkxKzh1UEFnVGRYWjAvM1Q4OUxKYVhKNGp2aXA2cEorRGNjYkhMeC9qaHNub2R2aUVzYXBqOXRESC9jNERPZVEKNHFWL3hyVGhBUCtjTlNkV3hQQmNEcHVLCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+type: kubernetes.io/tls
